@@ -1,0 +1,32 @@
+okay so with the same login toke the user cant register again now right?
+but what was the problem in last logout route ?
+no blacklist was there but logout happened can you simply tell the difference in simple words in previous and now (logout route) 
+To clear up your first point: Signup (registering) and Login do not require tokens. You only use a token after you log in to prove who you are when accessing protected routes (like your upcoming RFP analysis APIs).
+If a token is in the blacklist, it just means that specific token can no longer be used to access those protected routes. The user can still log in again to get a new token.
+
+ANS:
+
+Here is the difference between the two logout methods in simple terms:
+
+1. The Previous Logout (Frontend-Only / Stateless)
+Think of a standard JWT like a movie ticket.
+
+The server prints the ticket with an expiration time (e.g., valid for 24 hours) and gives it to you.
+
+The server does not keep a record of the tickets it prints. It only checks if the signature and date on the ticket are valid.
+
+When you logged out previously, the server just sent a message saying, "Please throw your ticket in the trash."
+
+The Problem: If a hacker steals your token before it expires, the server will still accept it because the signature is mathematically valid. The server has no idea you "logged out."
+
+2. The Current Logout (Backend Blacklist / Stateful)
+Think of this like a hotel key card.
+
+When you log out now, you hand the card back to the server.
+
+The server writes the card's exact ID onto a "Do Not Allow" list (your MongoDB token_blacklist collection).
+
+The Fix: Now, even if a hacker steals the token and tries to use it, the server checks the math (valid) but then checks the database list (blacklisted). The server immediately rejects the request.
+
+What happens next?
+Right now, the token goes into the MongoDB blacklist. To make this fully functional, when we build your protected RFP routes next, we will write a quick function that checks blacklist_collection. If the token is found there, we will throw a 401 Unauthorized error.

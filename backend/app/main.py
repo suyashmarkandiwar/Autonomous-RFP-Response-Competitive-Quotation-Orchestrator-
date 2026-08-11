@@ -1,26 +1,17 @@
+import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
+from app.api.v1.rfp import router as rfp_router
+from app.api.v1.authRoutes import router as auth_router
+from app.config import settings
 
-app = FastAPI(title="SME02 Orchestrator API")
+app = FastAPI(title="SME02 RFP Orchestrator")
 
-# The exact data shape we expect to receive (The RFP)
-class RFPRequest(BaseModel):
-    client_name: str
-    rfp_text: str
-    target_currency: str = "USD"
-    region: str = "US"
+@app.get("/")
+async def landing():
+    return {"message": "Welcome to the SME02 RFP Orchestrator API!"}
 
-@app.post("/api/v1/process-rfp")
-async def process_rfp(request: RFPRequest):
-    # Later, LangGraph goes here. For now, we verify data flow.
-    return {
-        "status": "success",
-        "message": f"RFP received for {request.client_name}.",
-        "received_text": request.rfp_text,
-        "next_step": "Ready to send to LangGraph Parser Agent."
-    }
+app.include_router(auth_router, prefix="/api/v1/auth")
+app.include_router(rfp_router, prefix="/api/v1/rfp")
 
 if __name__ == "__main__":
-    import uvicorn
-    # reload=True automatically restarts the server when you save code changes
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

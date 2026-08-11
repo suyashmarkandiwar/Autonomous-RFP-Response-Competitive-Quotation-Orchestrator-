@@ -38,7 +38,7 @@ if __name__ == "__main__":
     print("\n--- FINAL OUTPUT ---")
     print("\n1. Parsed & Priced Items:")
     for item in final_state["parsed_items"]:
-        print(f" - {item['qty']}x {item['item_name']} @ ₹{item['quoted_unit_price']} each")
+        print(f" - {item['qty']} {item['item_name']} @ ₹{item['quoted_unit_price']} each")
         
     print("\n2. Client Value Points:")
     print(final_state["executive_summary"])

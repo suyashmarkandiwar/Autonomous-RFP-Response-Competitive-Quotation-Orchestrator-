@@ -1,19 +1,86 @@
-# Environments
+# ──────────────────────────────────────────
+# Python / FastAPI — .gitignore
+# ──────────────────────────────────────────
+
+# ── Virtual Environments ──────────────────
 .venv/
 venv/
 env/
+ENV/
+.env.bak
 
-# Python Cache
-__pycache__/
-*.pyc
-*.pyo
-
-# Environment Variables (Secrets)
+# ── Environment Variables (Secrets) ──────
 .env
+.env.*
+!.env.example
 
-# Generated Output Files
+# ── Python Bytecode & Cache ───────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ── Distribution / Build ──────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+MANIFEST
+.eggs/
+wheels/
+
+# ── Testing & Coverage ────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+pytest.ini.bak
+
+# ── Type Checking ─────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyright/
+
+# ── Linting ───────────────────────────────
+.ruff_cache/
+
+# ── Database & Storage ────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ── Uploads / Generated Files ─────────────
+uploads/
+generated/
 *.pdf
+*.docx
+*.xlsx
+*.tmp
 
-# IDEs
+# ── Logs ──────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ── Jupyter / IPython ─────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ── OS Files ──────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# ── IDEs ──────────────────────────────────
 .vscode/
 .idea/
+*.suo
+*.user
+*.sublime-project
+*.sublime-workspace

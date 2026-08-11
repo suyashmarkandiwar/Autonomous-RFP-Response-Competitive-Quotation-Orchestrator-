@@ -1,10 +1,10 @@
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from app.agents.state import DrafterState
 from app.config import settings
 
 # Initialize Agent 3 (Drafter) LLM
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", api_key=settings.GEMINI_API_KEY)
+llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY)
 
 
 def _format_approved_items(approved_items: list) -> str:

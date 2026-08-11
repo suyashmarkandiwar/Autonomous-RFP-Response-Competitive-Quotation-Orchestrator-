@@ -1,13 +1,13 @@
 import re
 import json
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from app.agents.state import AnalysisState
 from app.db.mongodb import inventory_collection, competitors_collection
 from app.config import settings
 
 # Initialize the Pricing Agent LLM
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", api_key=settings.GEMINI_API_KEY)
+llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY)
 
 
 def _map_strategy_to_enum(rationale: str) -> str:
@@ -45,19 +45,30 @@ def pricing_node(state: AnalysisState):
         qty = item.get("qty", 1)
         item_id = _make_item_id(item_name, i)
 
-        # FIXED: Escape special characters like ( ) [ ] ? * to prevent MongoDB regex errors
-        safe_item_name = re.escape(item_name)
+        # Extract base product name — strip spec details in parentheses
+        # e.g. "Enterprise Laptop (16GB RAM, 512GB SSD)" → "Enterprise Laptop"
+        # This ensures DB rows stored as short names still match
+        base_item_name = item_name.split("(")[0].strip()
+        safe_base_name = re.escape(base_item_name)
 
         # ── 1. Query MongoDB for internal cost and competitor data ──────────
+        # Partial match (no ^ and $) so "Enterprise Laptop" matches all DB variants
         internal_data = inventory_collection.find_one(
-            {"item_name": {"$regex": f"^{safe_item_name}$", "$options": "i"}}
+            {"item_name": {"$regex": safe_base_name, "$options": "i"}}
         )
-        competitor_data = competitors_collection.find_one(
-            {"item_name": {"$regex": f"^{safe_item_name}$", "$options": "i"}}
+        competitor_data = competitors_collection.find(
+            {"item_name": {"$regex": safe_base_name, "$options": "i"}}
         )
 
-        base_cost   = internal_data.get("base_cost", 0.0)    if internal_data   else 0.0
-        comp_price  = competitor_data.get("market_price", 0.0) if competitor_data else 0.0
+
+        base_cost = internal_data.get("base_cost", 0.0) if internal_data else 0.0
+
+        # Convert cursor to list and extract all prices
+        all_competitors    = list(competitor_data)
+        all_comp_prices    = [doc["market_price"] for doc in all_competitors if "market_price" in doc]
+
+        # Representative price sent to AI (avg across all competitors, or 0 if none)
+        comp_price = round(sum(all_comp_prices) / len(all_comp_prices), 2) if all_comp_prices else 0.0
 
         # Pull richer fields from inventory if available
         category       = internal_data.get("category", "General")       if internal_data else "General"
@@ -108,11 +119,15 @@ def pricing_node(state: AnalysisState):
                        if quoted_unit_price > 0 else 0.0
         total_profit = round((quoted_unit_price - base_cost) * qty, 2)
 
-        # Build competitor range from single competitor price (expandable later)
-        comp_avg = comp_price
-        comp_min = round(comp_price * 0.95, 2) if comp_price else 0.0
-        comp_max = round(comp_price * 1.05, 2) if comp_price else 0.0
-        comp_sources = 1 if comp_price else 0
+        # Build competitor range from all real competitor prices in MongoDB
+        if all_comp_prices:
+            comp_min     = round(min(all_comp_prices), 2)
+            comp_max     = round(max(all_comp_prices), 2)
+            comp_avg     = round(sum(all_comp_prices) / len(all_comp_prices), 2)
+            comp_sources = len(all_comp_prices)
+        else:
+            comp_min = comp_max = comp_avg = 0.0
+            comp_sources = 0
 
         # ── 4. Build ParsedItem-shaped dict ────────────────────────────────
         enriched_parsed_items.append({

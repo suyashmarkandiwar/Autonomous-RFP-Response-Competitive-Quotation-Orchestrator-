@@ -38,12 +38,13 @@
 <body>
     <div class="header">
         <h2>Commercial Quotation</h2>
+        <p><strong>Quote ID:</strong> {{ quote_id }}</p>
+        <p><strong>RFP Title:</strong> {{ rfp_title }}</p>
         <p>Prepared for: <strong>{{ client_name }}</strong></p>
     </div>
 
     <div class="summary">
         <h3>Executive Summary</h3>
-        <!-- We use safe so HTML bullet points render correctly -->
         {{ executive_summary | safe }}
     </div>
 
@@ -55,11 +56,11 @@
             <th>Unit Price (₹)</th>
             <th>Total (₹)</th>
         </tr>
-        {% for item in parsed_items %}
+        {% for item in approved_items %}
         <tr>
             <td>{{ item.item_name }}</td>
-            <td>{{ item.qty }}</td>
-            <td>{{ item.quoted_unit_price }}</td>
+            <td>{{ item.quantity }}</td>
+            <td>{{ item.final_price }}</td>
             <td>{{ item.total_price }}</td>
         </tr>
         {% endfor %}

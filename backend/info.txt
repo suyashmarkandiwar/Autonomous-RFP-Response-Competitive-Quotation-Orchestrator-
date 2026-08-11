@@ -30,3 +30,41 @@ The Fix: Now, even if a hacker steals the token and tries to use it, the server 
 
 What happens next?
 Right now, the token goes into the MongoDB blacklist. To make this fully functional, when we build your protected RFP routes next, we will write a quick function that checks blacklist_collection. If the token is found there, we will throw a 401 Unauthorized error.
+
+=======================================================================================================
+
+Important Postman Note: Because we upgraded the /login route to the official OAuth2 spec, you can no longer use a raw JSON body to log in. In Postman, switch your body type from raw (JSON) to x-www-form-urlencoded and pass username (your email) and password as the keys.
+
+
+
+why not raw json body?
+
+now that OAuth2 spec you have implemented its more stronger? how? 
+
+Why not raw JSON?
+The official OAuth2 specification (RFC 6749) explicitly mandates that password-based token requests must be sent using the application/x-www-form-urlencoded format. FastAPI strictly enforces this standard.
+
+How is it stronger?
+It makes your API architecturally stronger and more standardized, rather than cryptographically stronger:
+
+Interoperability: Standard frontend libraries, third-party applications, and API gateways automatically know how to authenticate with a compliant OAuth2 endpoint without custom JSON parsing.
+
+Tooling Support: It enables native authentication flows, such as the built-in "Authorize" button in FastAPI's Swagger UI, to work seamlessly out of the box.
+
+Change the key name in Postman from email to username.
+
+Even though you are passing an email address (mukesh@example.com), the strict OAuth2 specification requires the form field to be named exactly username. FastAPI is rejecting the request because the required username field is missing.
+================================================================================================================
+Tesseract OCR (Optical Character Recognition) is a software engine that extracts text from images.
+
+Here is what it does:
+
+Converts Pixels to Text: It scans an image (like a JPG or PNG), recognizes the shapes of letters and numbers in the pixels, and converts them into standard, editable digital text.
+
+In your project: If a user uploads an image of an RFP instead of a PDF, Tesseract "reads" that image so your LangGraph agents can parse and analyze the text.
+
+to install such software explicitly is it valid? for production grades answer in short 
+
+Yes, it is completely valid and standard practice for production.
+
+In production environments, you do not install it manually. Instead, you automate the OS-level installation using a Dockerfile (e.g., RUN apt-get install -y tesseract-ocr) or a cloud provider's buildpack (on platforms like Render, AWS, or Heroku) so it installs automatically alongside your Python dependencies.

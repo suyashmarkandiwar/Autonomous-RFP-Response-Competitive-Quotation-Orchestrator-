@@ -1,13 +1,13 @@
 import json
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-from app.agents.state import GraphState
+from app.agents.state import AnalysisState
 from app.config import settings
 
 # Initialize the LLM using the key from config.py
-llm = ChatGoogleGenerativeAI(model="gemini-3.5-flash", api_key=settings.GEMINI_API_KEY)
+llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", api_key=settings.GEMINI_API_KEY)
 
-def parse_rfp_node(state: GraphState):
+def parse_rfp_node(state: AnalysisState):
     prompt = """
     Extract the required items and quantities from the following RFP text.
     Return ONLY a valid JSON list of dictionaries with keys "item_name" and "qty".
@@ -25,7 +25,11 @@ def parse_rfp_node(state: GraphState):
     
     # Strip markdown formatting and parse into a Python list
     clean_json = content_str.strip().removeprefix("```json").removesuffix("```").strip()
-    extracted_items = json.loads(clean_json)
+    try:
+        extracted_items = json.loads(clean_json)
+    except json.JSONDecodeError:
+        print(f"Failed to parse JSON from AI: {clean_json}")
+        extracted_items = [] # Fallback
     
     # Return the updated state
     return {"parsed_items": extracted_items}

@@ -20,7 +20,7 @@ export default function ReviewQuotation() {
         if (analysisData?.parsed_items && analysisData?.pricing_analysis) {
             const merged = analysisData.parsed_items.map(parsedItem => {
                 const pricingData = analysisData.pricing_analysis.find(p => p.item_id === parsedItem.item_id);
-                return { ...parsedItem, ...pricingData };
+                return { ...parsedItem, ...pricingData, is_approved: true };
             });
             setItems(merged);
         }
@@ -109,12 +109,14 @@ export default function ReviewQuotation() {
         setError('');
 
         try {
-            const approved_items = items.map(item => ({
-                item_id: item.item_id,
-                item_name: item.item_name,
-                quantity: item.quantity,
-                final_price: item.human_price_override
-            }));
+            const approved_items = items
+                .filter(item => item.is_approved)
+                .map(item => ({
+                    item_id: item.item_id,
+                    item_name: item.item_name,
+                    quantity: item.quantity,
+                    final_price: item.human_price_override
+                }));
 
             const payload = {
                 rfp_title: rfpTitle,
@@ -136,15 +138,24 @@ export default function ReviewQuotation() {
 
     const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
 
+    // KPI Calculations
+    const totalQuotedValue = items.reduce((acc, item) => acc + (parseFloat(item.human_price_override) || 0) * item.quantity, 0);
+    const internalCostBase = items.reduce((acc, item) => acc + (parseFloat(item.internal_cost) || 0) * item.quantity, 0);
+    const marketAvgBenchmark = items.reduce((acc, item) => acc + (parseFloat(item.competitor_avg) || 0) * item.quantity, 0);
+
+    const grossProfit = totalQuotedValue - internalCostBase;
+    const blendedMargin = totalQuotedValue > 0 ? (grossProfit / totalQuotedValue) * 100 : 0;
+    const varianceVsMarket = marketAvgBenchmark > 0 ? ((totalQuotedValue - marketAvgBenchmark) / marketAvgBenchmark) * 100 : 0;
+
     return (
         <div className="min-h-screen bg-[#080c1a] text-slate-800 p-8 font-sans">
 
             {/* Top Bar */}
-            <div className="max-w-7xl mx-auto flex justify-between items-end mb-6 text-white">
+            <div className="w-full mx-auto flex justify-between items-end mb-6 text-white">
                 <div>
                     <h1 className="text-3xl font-bold mb-2">Review Quotation: {rfpTitle}</h1>
                     <div className="flex items-center gap-4">
-                        <label className="text-sm text-slate-400">Client Name for PDF:</label>
+                        <label className="text-sm text-slate-400">Client Name:</label>
                         <input
                             type="text"
                             value={clientName}
@@ -156,142 +167,204 @@ export default function ReviewQuotation() {
                 <button
                     onClick={handleApproveAndGenerate}
                     disabled={isGenerating}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center gap-2 shadow-lg shadow-indigo-900/50 disabled:opacity-50"
+                    className="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition flex items-center gap-2 shadow-lg shadow-indigo-900/50 disabled:opacity-50"
                 >
                     {isGenerating ? 'Generating PDF...' : 'Approve & Generate PDF →'}
                 </button>
             </div>
 
+            {/* KPI Summary Cards */}
+            <div className="w-full mx-auto grid grid-cols-5 gap-4 mb-6">
+                {/* Card 1: Total Quoted Value */}
+                <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-slate-400">Total Quoted Value</h3>
+                        <span className="text-indigo-500 font-bold text-lg leading-none">$</span>
+                    </div>
+                    <div className="text-3xl font-black text-indigo-400 mb-1">{formatCurrency(totalQuotedValue)}</div>
+                    <p className="text-xs text-slate-400 font-medium">Live sum of all line items</p>
+                </div>
+
+                {/* Card 2: Internal Cost Base */}
+                <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-slate-400">Internal Cost Base</h3>
+                        <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                    </div>
+                    <div className="text-3xl font-black text-slate-100 mb-1">{formatCurrency(internalCostBase)}</div>
+                    <p className="text-xs text-slate-400 font-medium">Baseline delivery expense</p>
+                </div>
+
+                {/* Card 3: Market Avg Benchmark */}
+                <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-slate-400">Market Avg Benchmark</h3>
+                        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                    </div>
+                    <div className="text-3xl font-black text-slate-100 mb-1">{formatCurrency(marketAvgBenchmark)}</div>
+                    <p className="text-xs font-medium">
+                        <span className="text-slate-400">Variance: </span>
+                        <span className={varianceVsMarket <= 0 ? "text-emerald-400" : "text-red-400"}>
+                            {varianceVsMarket > 0 ? '+' : ''}{varianceVsMarket.toFixed(1)}% vs Market Avg
+                        </span>
+                    </p>
+                </div>
+
+                {/* Card 4: Blended Gross Margin */}
+                <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-slate-400">Blended Gross Margin</h3>
+                        <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                    </div>
+                    <div className="text-3xl font-black text-emerald-400 mb-1">{blendedMargin.toFixed(1)}%</div>
+                    <p className="text-xs font-medium text-emerald-500">
+                        +{formatCurrency(grossProfit)} Gross Profit
+                    </p>
+                </div>
+
+                {/* Card 5: Approval Status */}
+                <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
+                    <div className="flex justify-between items-start mb-2">
+                        <h3 className="text-sm font-semibold text-slate-400">Approval Status</h3>
+                        <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <div className="text-3xl font-black text-slate-100 mb-1">
+                        {items.filter(i => i.is_approved).length} / {items.length}
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium">Line items ready for review</p>
+                </div>
+            </div>
+
             {error && (
-                <div className="max-w-7xl mx-auto mb-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg">
+                <div className="w-full mx-auto mb-4 p-4 bg-red-900/50 border border-red-500 text-red-200 rounded-lg">
                     {error}
                 </div>
             )}
 
             {/* Main Table Container */}
-            <div className="max-w-7xl mx-auto bg-slate-50 rounded-xl overflow-hidden shadow-2xl">
+            <div className="w-full mx-auto bg-[#111827] rounded-xl overflow-hidden shadow-2xl border border-[#374151]">
 
                 {/* Table Header */}
-                <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider bg-white">
-                    <div className="col-span-1 text-center">Status</div>
-                    <div className="col-span-3">Item & Specs</div>
-                    <div className="col-span-1 text-center">Qty / Unit</div>
-                    <div className="col-span-1 text-right">Internal Cost</div>
-                    <div className="col-span-2 text-center">Competitor Sources</div>
-                    <div className="col-span-1 text-center">AI Strategy</div>
-                    <div className="col-span-2 text-center">Human Price Override</div>
-                    <div className="col-span-1 text-right">Margin & Profit</div>
+                <div className="grid gap-4 p-4 border-b border-[#374151] text-xs font-bold text-slate-400 uppercase tracking-wider bg-[#1f2937]"
+                    style={{ gridTemplateColumns: '0.5fr 2.5fr 1fr 1fr 1.5fr 2fr 2fr 1.5fr' }}>
+                    <div className="text-center">Status</div>
+                    <div>Item & Specs</div>
+                    <div className="text-center">Qty / Unit</div>
+                    <div className="text-right">Internal Cost</div>
+                    <div className="text-center">Competitor Sources</div>
+                    <div className="text-center">AI Strategy</div>
+                    <div className="text-center">Price</div>
+                    <div className="text-right">Margin & Profit</div>
                 </div>
 
                 {/* Table Rows */}
-                <div className="divide-y divide-slate-200 bg-white">
+                <div className="divide-y divide-[#374151] bg-[#111827]">
                     {items.map((item) => (
                         <div key={item.item_id} className="flex flex-col">
 
                             {/* Main Visible Row */}
-                            <div className="grid grid-cols-12 gap-4 p-4 items-center hover:bg-slate-50 transition relative">
+                            <div className="grid gap-4 p-4 items-center hover:bg-[#1f2937] transition relative"
+                                style={{ gridTemplateColumns: '0.5fr 2.5fr 1fr 1fr 1.5fr 2fr 2fr 1.5fr' }}>
 
                                 {/* Loading Overlay for individual row recalculation */}
                                 {recalculatingId === item.item_id && (
-                                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                                        <div className="animate-spin h-6 w-6 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-                                        <span className="ml-3 font-semibold text-indigo-700">AI Recalculating...</span>
+                                    <div className="absolute inset-0 bg-[#111827]/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                                        <div className="animate-spin h-6 w-6 border-4 border-indigo-500 border-t-transparent rounded-full"></div>
+                                        <span className="ml-3 font-semibold text-indigo-400">AI Recalculating...</span>
                                     </div>
                                 )}
 
-                                {/* Status */}
-                                <div className="col-span-1 flex justify-center">
-                                    <div className="w-6 h-6 rounded-full border-2 border-emerald-500 flex items-center justify-center text-emerald-500">
+                                {/* Status Checkbox */}
+                                <div className="flex justify-center">
+                                    <button
+                                        onClick={() => {
+                                            setItems(prevItems => prevItems.map(i =>
+                                                i.item_id === item.item_id ? { ...i, is_approved: !i.is_approved } : i
+                                            ));
+                                        }}
+                                        className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition cursor-pointer ${item.is_approved ? 'bg-emerald-500 border-emerald-500 text-slate-900' : 'border-slate-500 text-transparent hover:border-emerald-500'}`}
+                                    >
                                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                                    </div>
+                                    </button>
                                 </div>
 
                                 {/* Item & Specs */}
-                                <div className="col-span-3">
+                                <div>
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded">{item.item_id}</span>
-                                        <span className="text-xs text-indigo-600 font-semibold">{item.category}</span>
+                                        <span className="text-xs font-mono bg-[#374151] text-slate-300 px-2 py-0.5 rounded">{item.item_id}</span>
+                                        <span className="text-xs text-indigo-400 font-semibold">{item.category}</span>
                                     </div>
-                                    <div className="font-bold text-slate-900 text-sm leading-tight">{item.item_name}</div>
+                                    <div className="font-bold text-slate-100 text-sm leading-tight">{item.item_name}</div>
                                 </div>
 
                                 {/* Qty */}
-                                <div className="col-span-1 text-center">
-                                    <div className="font-bold text-slate-900">{item.quantity}</div>
-                                    <div className="text-xs text-slate-500">{item.unit}</div>
+                                <div className="text-center">
+                                    <div className="font-bold text-slate-100">{item.quantity}</div>
+                                    <div className="text-xs text-slate-400">{item.unit}</div>
                                 </div>
 
                                 {/* Internal Cost */}
-                                <div className="col-span-1 text-right">
-                                    <div className="font-bold text-slate-900">{formatCurrency(item.internal_cost)}</div>
-                                    <div className="text-xs text-slate-400">Total: {formatCurrency(item.internal_cost * item.quantity)}</div>
+                                <div className="text-right">
+                                    <div className="font-bold text-slate-100">{formatCurrency(item.internal_cost)}</div>
+                                    <div className="text-xs text-slate-500">Total: {formatCurrency(item.internal_cost * item.quantity)}</div>
                                 </div>
 
                                 {/* Competitor Sources Button */}
-                                <div className="col-span-2 flex flex-col items-center justify-center">
-                                    <div className="font-bold text-slate-900 mb-1">
-                                        {formatCurrency(item.competitor_avg)} <span className="text-xs text-slate-400 font-normal">(Avg)</span>
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="font-bold text-slate-100 mb-1">
+                                        {formatCurrency(item.competitor_avg)} <span className="text-xs text-slate-500 font-normal">(Avg)</span>
                                     </div>
                                     <button
                                         onClick={() => toggleRow(item.item_id)}
-                                        className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-100 flex items-center gap-1 transition"
+                                        className="cursor-pointer text-xs font-semibold text-indigo-300 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1.5 rounded-lg hover:bg-indigo-500/20 flex items-center gap-1 transition"
                                     >
-                                        {item.competitor_sources} Sources
+                                        Sources
                                         <svg className={`w-4 h-4 transform transition ${expandedRows[item.item_id] ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                                     </button>
                                 </div>
 
                                 {/* AI Strategy Dropdown */}
-                                <div className="col-span-1 flex justify-center">
+                                <div className="flex justify-center">
                                     <select
                                         value={item.selected_strategy}
                                         onChange={(e) => handleStrategyChange(item, e.target.value)}
-                                        className={`text-xs font-bold px-3 py-2 rounded-lg outline-none cursor-pointer border appearance-none text-center w-full shadow-sm
-                                            ${item.selected_strategy.includes('Undercut') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                item.selected_strategy.includes('Margin') ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                    'bg-blue-50 text-blue-700 border-blue-200'}`}
+                                        className={`text-xs font-bold px-2 py-2 rounded-lg outline-none cursor-pointer border appearance-none text-center shadow-sm
+                                            ${item.selected_strategy.includes('Undercut') ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                                item.selected_strategy.includes('Margin') ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
+                                                    'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}
                                     >
                                         {item.available_strategies.map(s => (
-                                            <option key={s} value={s}>{s}</option>
+                                            <option key={s} value={s} className="cursor-pointer bg-[#1f2937] text-white">{s}</option>
                                         ))}
                                     </select>
                                 </div>
 
-                                {/* Human Override & Rationale Tooltip */}
-                                <div className="col-span-2 flex items-center justify-center gap-2 relative group">
-
-                                    {/* AI Rationale Hover Card */}
-                                    <div className="absolute z-20 bottom-full mb-2 hidden group-hover:block w-64 bg-white border border-slate-200 shadow-xl rounded-xl p-4 text-xs text-slate-600 leading-relaxed">
-                                        <div className="font-bold text-indigo-600 mb-1 flex items-center gap-1">
-                                            <span>✨</span> AI Rationale
-                                        </div>
-                                        {item.ai_rationale}
-                                    </div>
-
+                                {/* Human Override (Tooltip removed) */}
+                                <div className="flex items-center justify-center gap-2">
                                     <div className="relative flex items-center w-3/4">
-                                        <span className="absolute left-3 text-slate-400 font-medium">$</span>
+                                        <span className="absolute left-3 text-slate-500 font-medium">$</span>
                                         <input
                                             type="number"
                                             value={item.human_price_override}
                                             onChange={(e) => handlePriceChange(item.item_id, e.target.value)}
-                                            className="w-full bg-white border border-slate-300 text-slate-900 rounded-lg pl-8 pr-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-right"
+                                            className="w-full bg-[#1f2937] border border-[#374151] text-white rounded-lg pl-8 pr-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-right transition"
                                         />
                                     </div>
-                                    <span className="text-xl cursor-help text-indigo-400 hover:text-indigo-600 transition">✨</span>
                                 </div>
 
                                 {/* Margin & Profit */}
-                                <div className="col-span-1 text-right">
-                                    <div className="font-bold text-slate-900">{formatCurrency(item.total_profit)}</div>
-                                    <div className={`text-xs font-bold ${item.margin_percentage > 20 ? 'text-emerald-600' : 'text-amber-500'}`}>
+                                <div className="text-right">
+                                    <div className="font-bold text-slate-100">{formatCurrency(item.total_profit)}</div>
+                                    <div className={`text-xs font-bold ${item.margin_percentage > 20 ? 'text-emerald-400' : 'text-amber-400'}`}>
                                         {item.margin_percentage}% Margin
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Nested Competitor Expanded Row (Dark Theme as requested) */}
+                            {/* Nested Competitor Expanded Row */}
                             {expandedRows[item.item_id] && (
-                                <div className="bg-[#111827] text-white p-6 shadow-inner border-t border-slate-200">
+                                <div className="bg-[#0b101a] text-white p-6 shadow-inner border-t border-[#374151]">
+                                    {/* ... rest of the nested expanded row remains exactly the same ... */}
                                     <div className="flex justify-between items-center mb-6">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
@@ -301,8 +374,22 @@ export default function ReviewQuotation() {
                                                 <h4 className="font-bold text-sm">MARKET COMPETITOR BENCHMARK COMPARISON ({item.competitor_sources} SOURCES)</h4>
                                                 <p className="text-xs text-slate-400">Detailed comparison of market pricing for <span className="font-semibold text-slate-200">{item.item_name}</span></p>
                                             </div>
+
+
                                         </div>
                                         <button onClick={() => toggleRow(item.item_id)} className="text-xs text-slate-400 hover:text-white transition">Close Table ^</button>
+                                    </div>
+
+                                    {/* NEW: Static AI Rationale Highlight Card */}
+                                    <div className="mb-6 bg-[#1f2937] border border-[#374151] rounded-lg p-4 relative overflow-hidden shadow-md">
+                                        {/* Left accent border */}
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                                        <div className="font-bold text-indigo-400 mb-2 flex items-center gap-2">
+                                            <span className="text-lg">✨</span> AI Pricing Rationale
+                                        </div>
+                                        <p className="text-sm text-slate-300 leading-relaxed ml-7">
+                                            {item.ai_rationale}
+                                        </p>
                                     </div>
 
                                     {/* Stat Cards */}

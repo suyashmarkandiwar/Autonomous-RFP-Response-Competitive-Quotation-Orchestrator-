@@ -49,7 +49,18 @@ def pricing_node(state: AnalysisState):
         # e.g. "Enterprise Laptop (16GB RAM, 512GB SSD)" → "Enterprise Laptop"
         # This ensures DB rows stored as short names still match
         base_item_name = item_name.split("(")[0].strip()
-        safe_base_name = re.escape(base_item_name)
+        
+        # Improve matching: remove trailing 's' for simple plural handling
+        search_term = base_item_name
+        if search_term.lower().endswith('s') and not search_term.lower().endswith('ss'):
+            search_term = search_term[:-1]
+            
+        # Broaden search to first two words to catch variations
+        words = search_term.split()
+        if len(words) >= 2:
+            search_term = f"{words[0]} {words[1]}"
+            
+        safe_base_name = re.escape(search_term)
 
         # ── 1. Query MongoDB for internal cost and competitor data ──────────
         # Partial match (no ^ and $) so "Enterprise Laptop" matches all DB variants
@@ -59,7 +70,6 @@ def pricing_node(state: AnalysisState):
         competitor_data = competitors_collection.find(
             {"item_name": {"$regex": safe_base_name, "$options": "i"}}
         )
-
 
         base_cost = internal_data.get("base_cost", 0.0) if internal_data else 0.0
 
@@ -120,11 +130,37 @@ def pricing_node(state: AnalysisState):
         total_profit = round((quoted_unit_price - base_cost) * qty, 2)
 
         # Build competitor range from all real competitor prices in MongoDB
+        competitor_details_list = []
         if all_comp_prices:
             comp_min     = round(min(all_comp_prices), 2)
             comp_max     = round(max(all_comp_prices), 2)
             comp_avg     = round(sum(all_comp_prices) / len(all_comp_prices), 2)
             comp_sources = len(all_comp_prices)
+            
+            # Build detailed objects for the UI
+            for comp in all_competitors:
+                c_price = comp.get("market_price", 0.0)
+                
+                # Determine tier based on price relative to avg
+                if c_price > comp_avg * 1.05:
+                    tier = "Premium"
+                elif c_price < comp_avg * 0.95:
+                    tier = "Budget Option"
+                else:
+                    tier = "Market Leader"
+                    
+                delta_val = c_price - quoted_unit_price
+                delta_pct = (delta_val / quoted_unit_price * 100) if quoted_unit_price else 0.0
+                sign = "+" if delta_val > 0 else ""
+                delta_str = f"{sign}${abs(delta_val):,.0f} ({sign}{delta_pct:.1f}%)"
+                
+                competitor_details_list.append({
+                    "competitor_name": comp.get("competitor_name", "Unknown"),
+                    "market_tier": tier,
+                    "est_market_share": 20, # Placeholder
+                    "unit_price": float(c_price),
+                    "price_delta_vs_quote": delta_str
+                })
         else:
             comp_min = comp_max = comp_avg = 0.0
             comp_sources = 0
@@ -147,7 +183,7 @@ def pricing_node(state: AnalysisState):
             "competitor_range_min":  comp_min,
             "competitor_range_max":  comp_max,
             "competitor_sources":    comp_sources,
-            "competitor_details":    [],           # Expanded by a future Competitor Research Agent
+            "competitor_details":    competitor_details_list,
             "selected_strategy":     _map_strategy_to_enum(rationale),
             "available_strategies":  [
                 "Undercut (-5%)", "Match Market Avg",

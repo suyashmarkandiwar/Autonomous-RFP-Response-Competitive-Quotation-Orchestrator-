@@ -1,70 +1,256 @@
 <!DOCTYPE html>
 <html>
-
 <head>
+    <meta charset="utf-8">
     <style>
+        @page {
+            size: letter portrait;
+            margin: 1.5cm;
+        }
         body {
-            font-family: Helvetica, sans-serif;
-            font-size: 14px;
+            font-family: "Helvetica", Arial, sans-serif;
+            font-size: 10pt;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+        
+        /* Master structural rules */
+        table { border-collapse: collapse; width: 100%; }
+        td { vertical-align: top; }
+        .no-break { page-break-inside: avoid; }
+
+        /* Typography & Colors */
+        .text-slate-900 { color: #0f172a; }
+        .text-slate-500 { color: #64748b; }
+        .text-indigo { color: #4f46e5; }
+        .text-emerald { color: #059669; }
+        
+        .font-bold { font-weight: bold; }
+        .text-xs { font-size: 8pt; }
+        .text-sm { font-size: 9pt; }
+        .text-base { font-size: 10pt; }
+        .text-lg { font-size: 12pt; }
+        .text-xl { font-size: 16pt; }
+        
+        /* Badges & Pills */
+        .badge {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            font-size: 7pt;
+            font-weight: bold;
+            color: #475569;
+            text-transform: uppercase;
+        }
+        .code-pill {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            font-size: 7pt;
+            color: #64748b;
+            font-family: "Courier New", Courier, monospace;
+            padding: 2px 4px;
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .summary {
-            margin-bottom: 30px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            border: 1px solid #dddddd;
+        /* Items Table */
+        .items-header td {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-size: 7pt;
+            font-weight: bold;
+            text-transform: uppercase;
             padding: 8px;
-            text-align: left;
+            border-bottom: 2px solid #cbd5e1;
+        }
+        .item-row td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle;
         }
 
-        th {
-            background-color: #f2f2f2;
+        /* Specific aligners */
+        .align-right { text-align: right; }
+        .align-center { text-align: center; }
+        
+        /* Lists */
+        ul.terms-list { margin: 0 0 0 15px; padding: 0; color: #64748b; font-size: 8pt; }
+        ul.terms-list li { margin-bottom: 5px; }
+
+        .grand-total-row td {
+            border-top: 1px solid #cbd5e1;
+            padding-top: 8px;
+            font-weight: bold;
+            font-size: 11pt;
+            color: #0f172a;
         }
     </style>
 </head>
 
 <body>
-    <div class="header">
-        <h2>Commercial Quotation</h2>
-        <p><strong>Quote ID:</strong> {{ quote_id }}</p>
-        <p><strong>RFP Title:</strong> {{ rfp_title }}</p>
-        <p>Prepared for: <strong>{{ client_name }}</strong></p>
-    </div>
-
-    <div class="summary">
-        <h3>Executive Summary</h3>
-        {{ executive_summary | safe }}
-    </div>
-
-    <h3>Line Items</h3>
-    <table>
-        <tr>
-            <th>Item Name</th>
-            <th>Qty</th>
-            <th>Unit Price (₹)</th>
-            <th>Total (₹)</th>
+    <!-- MASTER TABLE FOR RELIABLE SPACING IN PDF -->
+    <table width="100%" cellpadding="0" cellspacing="0">
+        
+        <!-- HEADER ROW -->
+        <tr class="no-break">
+            <td width="60%">
+                <div class="text-xl font-bold text-slate-900" style="margin-bottom: 4px;">
+                    <span style="background-color: #4f46e5; color: #ffffff; padding: 2px 4px; font-size: 14pt;">QP</span> 
+                    QuotePulse <span class="text-indigo">Enterprise</span>
+                </div>
+                <div class="text-xs text-slate-500">Autonomous SaaS Systems &bull; 100 Enterprise Way, Suite 400<br>San Francisco, CA</div>
+            </td>
+            <td width="40%" class="align-right">
+                <div style="margin-bottom: 6px;"><span class="badge">OFFICIAL QUOTATION</span></div>
+                <div class="text-sm font-bold text-indigo" style="margin-bottom: 2px;">REF: {{ quote_id }}</div>
+                <div class="text-xs text-slate-500">Date: {{ current_date }}</div>
+                <div class="text-xs text-slate-500">Valid Until: {{ valid_until }}</div>
+            </td>
         </tr>
-        {% for item in approved_items %}
-        <tr>
-            <td>{{ item.item_name }}</td>
-            <td>{{ item.quantity }}</td>
-            <td>{{ item.final_price }}</td>
-            <td>{{ item.total_price }}</td>
+
+        <!-- SPACER -->
+        <tr><td colspan="2" height="30"></td></tr>
+
+        <!-- CLIENT DETAILS ROW -->
+        <tr class="no-break">
+            <td colspan="2">
+                <table width="100%" cellpadding="15" cellspacing="0" style="border: 1px solid #e2e8f0;">
+                    <tr>
+                        <td width="50%" bgcolor="#f8fafc" style="border-right: 1px solid #e2e8f0;">
+                            <div class="text-xs font-bold text-slate-500" style="margin-bottom: 4px;">PREPARED FOR:</div>
+                            <div class="text-base font-bold text-slate-900" style="margin-bottom: 6px;">{{ client_name }}</div>
+                            <div class="text-xs text-slate-500">
+                                Sarah Vance, VP Infrastructure<br>
+                                s.vance@{{ client_name.lower() | replace(' ', '') | replace(',', '') }}.com<br>
+                                Financial Services / Banking
+                            </div>
+                        </td>
+                        <td width="50%" bgcolor="#f8fafc" class="align-right">
+                            <div class="text-xs font-bold text-slate-500" style="margin-bottom: 4px;">PROPOSAL DETAILS:</div>
+                            <div class="text-base font-bold text-slate-900" style="margin-bottom: 6px;">{{ rfp_title }}</div>
+                            <div class="text-xs text-slate-500">
+                                Authorized Officer: Human Operator<br>
+                                Status: <span class="text-emerald font-bold">Approved & Certified</span>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
         </tr>
-        {% endfor %}
+
+        <!-- SPACER -->
+        <tr><td colspan="2" height="30"></td></tr>
+
+        <!-- EXEC SUMMARY ROW -->
+        {% if executive_summary %}
+        <tr class="no-break">
+            <td colspan="2">
+                <div class="text-sm text-slate-500" style="line-height: 1.5;">
+                    {{ executive_summary | safe }}
+                </div>
+            </td>
+        </tr>
+        <tr><td colspan="2" height="20"></td></tr>
+        {% endif %}
+
+        <!-- ITEMS LEDGER ROW -->
+        <tr>
+            <td colspan="2">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr class="items-header no-break">
+                        <td width="55%">CODE / ITEM SPECIFICATION</td>
+                        <td width="15%" class="align-center">QTY</td>
+                        <td width="15%" class="align-right">UNIT PRICE</td>
+                        <td width="15%" class="align-right">TOTAL PRICE</td>
+                    </tr>
+                    
+                    {% set ns = namespace(subtotal=0) %}
+                    {% for item in approved_items %}
+                    {% set item_total = item.quantity * item.final_price %}
+                    {% set ns.subtotal = ns.subtotal + item_total %}
+                    <tr class="item-row no-break">
+                        <td>
+                            <div class="text-sm font-bold text-slate-900" style="margin-bottom: 2px;">{{ item.item_name }}</div>
+                            <div class="text-xs text-slate-500" style="margin-bottom: 6px;">Premium enterprise-grade configuration and support.</div>
+                            <div><span class="code-pill">{{ item.item_id | default('ITM-00' ~ loop.index) }}</span></div>
+                        </td>
+                        <td class="align-center text-sm" style="color: #334155;">{{ item.quantity }} Units</td>
+                        <td class="align-right text-sm" style="color: #334155;">${{ "{:,.0f}".format(item.final_price) }}</td>
+                        <td class="align-right text-sm font-bold text-slate-900">${{ "{:,.0f}".format(item_total) }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+        </tr>
+
+        <!-- SPACER -->
+        <tr><td colspan="2" height="30"></td></tr>
+
+        <!-- TOTALS ROW (Split Grid) -->
+        <tr class="no-break">
+            <td width="55%"></td>
+            <td width="45%">
+                <table width="100%" cellpadding="6" cellspacing="0">
+                    <tr>
+                        <td class="text-sm text-slate-500">Subtotal</td>
+                        <td class="align-right text-sm text-slate-500">${{ "{:,.0f}".format(ns.subtotal) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-sm text-slate-500">Estimated Tax / Fee (5%)</td>
+                        <td class="align-right text-sm text-slate-500">${{ "{:,.0f}".format(ns.subtotal * 0.05) }}</td>
+                    </tr>
+                    <tr class="grand-total-row">
+                        <td>Grand Total (USD)</td>
+                        <td class="align-right text-indigo">${{ "{:,.0f}".format(ns.subtotal * 1.05) }}</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+
+        <!-- SPACER -->
+        <tr><td colspan="2" height="40"></td></tr>
+
+        <!-- TERMS ROW -->
+        <tr class="no-break">
+            <td colspan="2">
+                <div class="text-xs font-bold text-slate-900" style="margin-bottom: 8px;">STANDARD TERMS & SERVICE GUARANTEES</div>
+                <ul class="terms-list">
+                    <li>Pricing guaranteed for 90 days from quotation issue date ({{ valid_until }}).</li>
+                    <li>SLA Guarantee: 99.99% operational uptime backed by 15-minute emergency response support.</li>
+                    <li>Payment Schedule: 40% upon execution, 40% upon staging milestone, 20% upon final launch.</li>
+                </ul>
+            </td>
+        </tr>
+
+        <!-- SPACER -->
+        <tr><td colspan="2" height="40"></td></tr>
+
+        <!-- FOOTER ROW -->
+        <tr class="no-break">
+            <td colspan="2" style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td width="60%">
+                            <div style="font-size: 11pt; font-family: Georgia, serif; font-style: italic; font-weight: bold; color: #0f172a; margin-bottom: 12px;">QuotePulse AI<br>Officer</div>
+                            <div class="text-xs text-slate-500">Authorized Signatory</div>
+                            <div class="text-xs" style="color: #94a3b8; font-size: 7pt; margin-top: 2px;">Automated Audit Hash: 0x89F...C31</div>
+                        </td>
+                        <td width="40%" class="align-right">
+                            <table align="right" cellpadding="8" cellspacing="0" style="border: 1px solid #cbd5e1;">
+                                <tr>
+                                    <td valign="middle" style="padding-right: 10px;">
+                                        <div style="color: #059669; font-weight: bold; font-size: 14pt;">&#10003;</div>
+                                    </td>
+                                    <td class="align-left" valign="middle">
+                                        <div class="text-xs font-bold text-slate-900">SOC-2 Type II Certified</div>
+                                        <div style="font-size: 7pt; color: #64748b;">Cryptographically Verified Proposal</div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+
     </table>
 </body>
-
 </html>

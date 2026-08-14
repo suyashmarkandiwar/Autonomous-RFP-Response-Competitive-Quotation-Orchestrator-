@@ -105,6 +105,9 @@ class ApproveAndGenerateRequest(BaseModel):
     client_name: str
     approved_items: List[ApprovedLineItem]
 
+class RegenerateRequest(BaseModel):
+    html_content: str
+
 class ApproveAndGenerateResponse(BaseModel):
     quote_id: str
     total_quoted_value: float
@@ -257,7 +260,7 @@ async def approve_and_generate(
     executive_summary = graph_result.get("executive_summary","")
     
     # 3. Generate PDF
-    pdf_path = generate_pdf(
+    pdf_path, html_content = generate_pdf(
         client_name=request.client_name,
         rfp_title=request.rfp_title,
         executive_summary=executive_summary,
@@ -274,6 +277,7 @@ async def approve_and_generate(
         "total_value":       total_value,
         "executive_summary": executive_summary,
         "pdf_path":          pdf_path,
+        "html_content":      html_content,
         "status":            "Generated"
     })
 
@@ -282,6 +286,61 @@ async def approve_and_generate(
         "total_quoted_value": total_value,
         "status": "PDF generated and saved successfully."
     }
+
+@router.get("/preview-pdf/{quote_id}")
+async def preview_pdf(quote_id: str, current_user: str = Depends(get_current_user)):
+    """
+    Action: Retrieves PDF path from MongoDB and returns the file for preview
+    """
+    # Fetch real PDF path from MongoDB using quote_id
+    quote_record = rfp_quotes_collection.find_one({"quote_id": quote_id})
+    if not quote_record:
+        raise HTTPException(status_code=404, detail=f"Quote {quote_id} not found.")
+
+    pdf_path = quote_record.get("pdf_path", "")
+    if not pdf_path or not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail=f"PDF file for {quote_id} not found on server.")
+
+    return FileResponse(pdf_path, media_type="application/pdf", filename=f"{quote_id}.pdf")
+
+@router.get("/preview-html/{quote_id}")
+async def preview_html(quote_id: str, current_user: str = Depends(get_current_user)):
+    """
+    Action: Retrieves the raw HTML for the quote so it can be previewed/edited in the browser.
+    """
+    quote_record = rfp_quotes_collection.find_one({"quote_id": quote_id})
+    if not quote_record:
+        raise HTTPException(status_code=404, detail=f"Quote {quote_id} not found.")
+
+    html_content = quote_record.get("html_content", "")
+    return {"html_content": html_content}
+
+@router.post("/regenerate-pdf/{quote_id}")
+async def regenerate_pdf(quote_id: str, request: RegenerateRequest, current_user: str = Depends(get_current_user)):
+    """
+    Action: Accepts raw edited HTML from the frontend, saves it, and regenerates the underlying PDF file.
+    """
+    quote_record = rfp_quotes_collection.find_one({"quote_id": quote_id})
+    if not quote_record:
+        raise HTTPException(status_code=404, detail=f"Quote {quote_id} not found.")
+        
+    pdf_path = quote_record.get("pdf_path", "")
+    if not pdf_path:
+        # Fallback to current dir if missing
+        pdf_path = os.path.join(os.getcwd(), f"{quote_id}.pdf")
+        
+    # Overwrite the PDF with the edited HTML
+    from xhtml2pdf import pisa
+    with open(pdf_path, "w+b") as pdf_file:
+        pisa.CreatePDF(request.html_content, dest=pdf_file)
+        
+    # Update HTML in DB
+    rfp_quotes_collection.update_one(
+        {"quote_id": quote_id},
+        {"$set": {"html_content": request.html_content}}
+    )
+    
+    return {"status": "Success", "message": "PDF regenerated successfully."}
 
 @router.get("/download-pdf/{quote_id}")
 async def download_pdf(quote_id: str, current_user: str = Depends(get_current_user)):

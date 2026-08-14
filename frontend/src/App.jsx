@@ -3,7 +3,8 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import UploadRFP from './pages/UploadRFP';
-import ReviewQuotation from './pages/ReviewQuotation'; // New import
+import ReviewQuotation from './pages/ReviewQuotation';
+import PreviewPDF from './pages/PreviewPDF';
 
 function App() {
   return (
@@ -16,6 +17,9 @@ function App() {
 
         {/* New route for the review section */}
         <Route path="/review" element={<ReviewQuotation />} />
+        
+        {/* PDF Preview and Download Route */}
+        <Route path="/preview/:quoteId" element={<PreviewPDF />} />
       </Routes>
     </Router>
   );

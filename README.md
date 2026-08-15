@@ -134,5 +134,3 @@ The application uses standard OAuth2 Password Bearer flow.
 
 ---
 
-## 📝 License
-This project is licensed under the MIT License.

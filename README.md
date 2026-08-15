@@ -33,6 +33,38 @@ Powered by **LangGraph**, **Groq (Llama 3)**, **Gemini 3.6 Flash**, and **FastAP
 
 ---
 
+## 📂 Folder Structure
+
+```text
+QuotePulse/
+├── backend/
+│   ├── app/
+│   │   ├── agents/           # LangGraph agents (drafter, parser, pricing, graph)
+│   │   ├── api/v1/           # API Routers (auth, rfp routes)
+│   │   ├── core/             # Core configurations & security
+│   │   ├── db/               # MongoDB connections & models
+│   │   ├── services/         # Business logic (PDF generation, etc)
+│   │   ├── templates/        # Jinja2 HTML templates and fonts
+│   │   └── main.py           # FastAPI entrypoint
+│   ├── outputs/              # Generated Quotation PDFs
+│   ├── .env                  # Environment Variables
+│   └── requirements.txt      # Python dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── api/              # Axios instance configuration
+│   │   ├── components/       # Reusable React components (PrivateRoute)
+│   │   ├── context/          # React context (AuthContext)
+│   │   ├── pages/            # App Pages (Landing, Login, UploadRFP, ReviewQuotation, PreviewPDF)
+│   │   ├── App.jsx           # Main Application Router
+│   │   └── main.jsx          # React DOM entrypoint
+│   ├── package.json          # Node dependencies
+│   ├── tailwind.config.js    # Tailwind configuration
+│   └── vite.config.js        # Vite configuration
+└── README.md
+```
+
+---
+
 ## 🚀 Getting Started
 
 ### Prerequisites

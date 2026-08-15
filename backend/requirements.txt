@@ -1,0 +1,38 @@
+# Web Framework
+fastapi==0.135.3
+uvicorn==0.44.0
+python-multipart==0.0.32
+starlette==1.0.0
+
+# AI / LLM
+langchain-core==1.5.3
+langchain-groq==1.1.3
+langchain-google-genai==4.3.2
+langgraph==1.2.10
+groq==0.37.1
+
+# PDF Generation
+xhtml2pdf==0.2.17
+Markdown==3.10.3
+Jinja2==3.1.6
+Pillow==12.3.0
+reportlab==4.5.1
+
+# File Parsing / OCR
+PyPDF2==3.0.1
+pytesseract==0.3.13
+
+# Database
+pymongo==4.17.0
+
+# Auth / Security
+passlib==1.7.4
+bcrypt==3.2.2
+python-jose==3.5.0
+email-validator==2.3.0
+
+# Config
+python-dotenv==1.2.2
+
+# Data validation
+pydantic==2.12.5

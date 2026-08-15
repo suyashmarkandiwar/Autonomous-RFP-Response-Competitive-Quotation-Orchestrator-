@@ -12,8 +12,8 @@ def _format_approved_items(approved_items: list) -> str:
     Converts the approved_items list into a readable summary string
     for the LLM prompt.
     Example output:
-        - 50x Enterprise Laptop @ $1,200 each (Total: $60,000)
-        - 2x Database Server @ $8,500 each (Total: $17,000)
+        - 50x Enterprise Laptop @ ₹1,200 each (Total: ₹60,000)
+        - 2x Database Server @ ₹8,500 each (Total: ₹17,000)
     """
     lines = []
     for item in approved_items:
@@ -21,7 +21,7 @@ def _format_approved_items(approved_items: list) -> str:
         qty      = item.get("quantity", 1)
         price    = item.get("final_price", 0.0)
         total    = qty * price
-        lines.append(f"- {qty}x {name} @ ${price:,.2f} each (Total: ${total:,.2f})")
+        lines.append(f"- {qty}x {name} @ ₹{price:,.2f} each (Total: ₹{total:,.2f})")
     return "\n".join(lines) if lines else "No items provided."
 
 

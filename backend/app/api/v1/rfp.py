@@ -1,27 +1,28 @@
-import os
 import io
+import json
+import os
+import uuid
+from enum import Enum
+from typing import List, Optional
+
 import PyPDF2
 import pytesseract
-from PIL import Image
-from fastapi import HTTPException, File, UploadFile, Depends
-import uuid
-from fastapi import HTTPException
-from app.services.pdf import generate_pdf
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
-from typing import List, Optional
-from fastapi import File, UploadFile  
-from fastapi.responses import FileResponse 
-from app.agents.graph import analysis_app, generation_app 
-from enum import Enum
-from app.api.v1.authRoutes import get_current_user
-from app.db.mongodb import rfp_quotes_collection
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from langchain_core.prompts import PromptTemplate
-from langchain_google_genai import ChatGoogleGenerativeAI
-from app.config import settings
-import json
+from langchain_groq import ChatGroq
+from PIL import Image
+from pydantic import BaseModel
 
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+from app.agents.graph import analysis_app, generation_app
+from app.api.v1.authRoutes import get_current_user
+from app.config import settings
+from app.db.mongodb import rfp_quotes_collection
+from app.services.pdf import generate_pdf
+
+
+pytesseract.pytesseract.tesseract_cmd = settings.TESSERACT_PATH
+
 
 router = APIRouter()
 
@@ -51,7 +52,7 @@ class CompetitorDetail(BaseModel):
     market_tier: str
     est_market_share: int  # Percentage
     unit_price: float
-    price_delta_vs_quote: str # e.g., "-$600 (-7.7%)"
+    price_delta_vs_quote: str # e.g., "-₹600 (-7.7%)"
 
 class PricingData(BaseModel):
     item_id: str
@@ -179,7 +180,7 @@ async def analyze_rfp(request: RFPAnalyzeRequest, current_user: str = Depends(ge
     }
 
 # Initialize LLM directly for this endpoint
-recalc_llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", api_key=settings.GEMINI_API_KEY)
+recalc_llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=settings.GROQ_API_KEY)
 
 @router.post("/recalculate", response_model=RecalculateResponse)
 async def recalculate_strategy(request: StrategyUpdateRequest, current_user: str = Depends(get_current_user)):
@@ -252,7 +253,7 @@ async def approve_and_generate(
     state_input = {
         "rfp_title": request.rfp_title,
         "client_name": request.client_name,
-        "approved_items": [item.dict() for item in request.approved_items]
+        "approved_items": [item.model_dump() for item in request.approved_items]
     }
     
     # 2. Run Graph 2 (Drafter Agent)
@@ -331,8 +332,9 @@ async def regenerate_pdf(quote_id: str, request: RegenerateRequest, current_user
         
     # Overwrite the PDF with the edited HTML
     from xhtml2pdf import pisa
+    from app.services.pdf import fetch_resources
     with open(pdf_path, "w+b") as pdf_file:
-        pisa.CreatePDF(request.html_content, dest=pdf_file)
+        pisa.CreatePDF(request.html_content, dest=pdf_file, link_callback=fetch_resources)
         
     # Update HTML in DB
     rfp_quotes_collection.update_one(

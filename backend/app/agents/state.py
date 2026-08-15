@@ -29,4 +29,3 @@ class DrafterState(TypedDict):
 
     # ── Agent 3 (Drafter) writes ──────────────────────────────
     executive_summary: str
-    pdf_file_path: str

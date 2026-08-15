@@ -80,13 +80,18 @@ export default function UploadRFP() {
     };
 
     const handleContinueToReview = () => {
+        const rfpTitle = file.name.replace(/\.[^/.]+$/, "");
+        // Persist to sessionStorage so /review survives a page refresh
+        sessionStorage.setItem('rfp_analysisData', JSON.stringify(analysisPayload));
+        sessionStorage.setItem('rfp_rfpTitle', rfpTitle);
         navigate('/review', {
             state: {
                 analysisData: analysisPayload,
-                rfpTitle: file.name.replace(/\.[^/.]+$/, "")
+                rfpTitle
             }
         });
     };
+
 
     return (
         <div style={{ fontFamily: "'Inter','Segoe UI',sans-serif", minHeight: '100vh', background: '#080c1a', color: '#fff', padding: 24, position: 'relative', overflow: 'hidden' }}>

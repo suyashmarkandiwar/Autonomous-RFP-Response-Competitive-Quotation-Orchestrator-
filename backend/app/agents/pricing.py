@@ -136,9 +136,15 @@ def pricing_node(state: AnalysisState):
             comp_max     = round(max(all_comp_prices), 2)
             comp_avg     = round(sum(all_comp_prices) / len(all_comp_prices), 2)
             comp_sources = len(all_comp_prices)
+
+            # Estimate market share via inverse-price weighting:
+            # cheaper competitors tend to capture more market share.
+            # Each competitor's weight = 1/price; then normalise to sum to 100.
+            inv_prices    = [1.0 / c for c in all_comp_prices if c > 0]
+            total_inv     = sum(inv_prices) if inv_prices else 1.0
             
             # Build detailed objects for the UI
-            for comp in all_competitors:
+            for comp, inv_w in zip(all_competitors, inv_prices):
                 c_price = comp.get("market_price", 0.0)
                 
                 # Determine tier based on price relative to avg
@@ -152,18 +158,22 @@ def pricing_node(state: AnalysisState):
                 delta_val = c_price - quoted_unit_price
                 delta_pct = (delta_val / quoted_unit_price * 100) if quoted_unit_price else 0.0
                 sign = "+" if delta_val > 0 else ""
-                delta_str = f"{sign}${abs(delta_val):,.0f} ({sign}{delta_pct:.1f}%)"
+                delta_str = f"{sign}₹{abs(delta_val):,.0f} ({sign}{delta_pct:.1f}%)"
+
+                # Market share: inverse-price-weighted percentage, rounded to nearest int
+                est_share = round((inv_w / total_inv) * 100)
                 
                 competitor_details_list.append({
                     "competitor_name": comp.get("competitor_name", "Unknown"),
                     "market_tier": tier,
-                    "est_market_share": 20, # Placeholder
+                    "est_market_share": est_share,
                     "unit_price": float(c_price),
                     "price_delta_vs_quote": delta_str
                 })
         else:
             comp_min = comp_max = comp_avg = 0.0
             comp_sources = 0
+
 
         # ── 4. Build ParsedItem-shaped dict ────────────────────────────────
         enriched_parsed_items.append({

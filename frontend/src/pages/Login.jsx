@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export default function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,7 +21,7 @@ export default function Login() {
             params.append('username', email);
             params.append('password', password);
             const res = await api.post('/api/v1/auth/login', params);
-            localStorage.setItem('access_token', res.data.access_token);
+            login(res.data.access_token);  // sets localStorage + updates context
             navigate('/upload');
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid credentials. Please try again.');
@@ -27,6 +29,7 @@ export default function Login() {
             setLoading(false);
         }
     };
+
 
     return (
         <div style={{ fontFamily: "'Inter','Segoe UI',sans-serif", minHeight: '100vh', background: '#080c1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>

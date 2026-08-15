@@ -6,7 +6,15 @@ export default function ReviewQuotation() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const { analysisData, rfpTitle } = location.state || {};
+    const { analysisData: stateData, rfpTitle: stateTitle } = location.state || {};
+
+    // Fall back to sessionStorage if the user refreshed the page (location.state is null)
+    const analysisData = stateData ?? (() => {
+        const cached = sessionStorage.getItem('rfp_analysisData');
+        return cached ? JSON.parse(cached) : null;
+    })();
+    const rfpTitle = stateTitle ?? sessionStorage.getItem('rfp_rfpTitle') ?? 'Untitled RFP';
+
 
     const [items, setItems] = useState([]);
     const [expandedRows, setExpandedRows] = useState({});
@@ -136,12 +144,13 @@ export default function ReviewQuotation() {
         }
     };
 
-    const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val);
+    const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
 
     // KPI Calculations
-    const totalQuotedValue = items.reduce((acc, item) => acc + (parseFloat(item.human_price_override) || 0) * item.quantity, 0);
-    const internalCostBase = items.reduce((acc, item) => acc + (parseFloat(item.internal_cost) || 0) * item.quantity, 0);
-    const marketAvgBenchmark = items.reduce((acc, item) => acc + (parseFloat(item.competitor_avg) || 0) * item.quantity, 0);
+    const approvedItemsForKPI = items.filter(item => item.is_approved);
+    const totalQuotedValue = approvedItemsForKPI.reduce((acc, item) => acc + (parseFloat(item.human_price_override) || 0) * item.quantity, 0);
+    const internalCostBase = approvedItemsForKPI.reduce((acc, item) => acc + (parseFloat(item.internal_cost) || 0) * item.quantity, 0);
+    const marketAvgBenchmark = approvedItemsForKPI.reduce((acc, item) => acc + (parseFloat(item.competitor_avg) || 0) * item.quantity, 0);
 
     const grossProfit = totalQuotedValue - internalCostBase;
     const blendedMargin = totalQuotedValue > 0 ? (grossProfit / totalQuotedValue) * 100 : 0;
@@ -179,7 +188,7 @@ export default function ReviewQuotation() {
                 <div className="bg-[#111827] border border-[#374151] rounded-2xl p-5 shadow-lg relative">
                     <div className="flex justify-between items-start mb-2">
                         <h3 className="text-sm font-semibold text-slate-400">Total Quoted Value</h3>
-                        <span className="text-indigo-500 font-bold text-lg leading-none">$</span>
+                        <span className="text-indigo-500 font-bold text-lg leading-none">₹</span>
                     </div>
                     <div className="text-3xl font-black text-indigo-400 mb-1">{formatCurrency(totalQuotedValue)}</div>
                     <p className="text-xs text-slate-400 font-medium">Live sum of all line items</p>
@@ -334,7 +343,7 @@ export default function ReviewQuotation() {
                                                     'bg-blue-500/10 text-blue-400 border-blue-500/30'}`}
                                     >
                                         {item.available_strategies.map(s => (
-                                            <option key={s} value={s} className="cursor-pointer bg-[#1f2937] text-white">{s}</option>
+                                            <option key={s} value={s} className="bg-[#1f2937] text-white">{s}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -342,7 +351,7 @@ export default function ReviewQuotation() {
                                 {/* Human Override (Tooltip removed) */}
                                 <div className="flex items-center justify-center gap-2">
                                     <div className="relative flex items-center w-3/4">
-                                        <span className="absolute left-3 text-slate-500 font-medium">$</span>
+                                        <span className="absolute left-3 text-slate-500 font-medium">₹</span>
                                         <input
                                             type="number"
                                             value={item.human_price_override}
